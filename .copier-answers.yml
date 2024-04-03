@@ -1,9 +1,8 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 43eb278
+_commit: 125577f
 _src_path: gh:goodcleanfun/pypi-template
 author: Al Barrentine
 description: A library of common Python utilities and functions
 license: MIT
 name: communal
 repo_org: goodcleanfun
-
