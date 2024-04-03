@@ -17,7 +17,6 @@ def checksum(filename, hashfunc="md5"):
     h = hf()
 
     with open(filename, "rb") as f:
-        done = False
         while True:
             chunk = f.read(4096)
             if not chunk:

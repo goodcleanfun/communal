@@ -1,6 +1,6 @@
 import requests
-from urllib3.util import Retry
 from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 
 def add_retries_to_requests_session(
