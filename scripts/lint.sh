@@ -3,5 +3,5 @@
 set -e
 set -x
 
-ruff communal tests --fix
+ruff check communal tests --fix
 black communal tests --check
