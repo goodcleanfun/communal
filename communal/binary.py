@@ -6,7 +6,7 @@ from communal.properties import classproperty
 
 
 def int_to_bytes(x: int, endianness="little"):
-    if type(x) != int:
+    if not isinstance(x, int):
         x = int(x)
     return x.to_bytes((x.bit_length() + 7) // 8, endianness)
 
