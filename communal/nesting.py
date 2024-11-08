@@ -1,7 +1,17 @@
 import copy
-import itertools
 import operator
 from collections import deque
+
+try:
+    from itertools import pairwise
+except ImportError:
+    from itertools import tee
+
+    def pairwise(iterable):
+        a, b = tee(iterable)
+        next(b, None)
+        return zip(a, b)
+
 
 from communal.collections import is_mapping
 from communal.functions import attr_or_key_getter
@@ -173,7 +183,7 @@ def nested_set(d, keys, value):
 
     level = d
 
-    for key, next_key in itertools.pairwise(keys):
+    for key, next_key in pairwise(keys):
         key_is_string = isinstance(key, str)
         key_is_digit = isinstance(key, int) or (key_is_string and key.isdigit())
 
