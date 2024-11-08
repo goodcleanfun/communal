@@ -1,4 +1,5 @@
 import copy
+import itertools
 import operator
 from collections import deque
 
@@ -140,8 +141,16 @@ def nested_getter(default=DoesNotExist):
     return _nested_get_with_default
 
 
-def nested_exists(d, key):
-    keys = iterify(key)
+def nested_exists(d, keys):
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    keys = iterify(keys)
+
+    # For source_data fields, just return the whole document
+    if len(keys) == 0:
+        return True
+
     obj = nested_get(d, keys[:-1], default=DoesNotExist)
 
     last_key = keys[-1]
@@ -157,10 +166,14 @@ def nested_exists(d, key):
 
 
 def nested_set(d, keys, value):
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    keys = iterify(keys)
+
     level = d
 
-    key_pairs = list(zip(keys, keys[1:]))
-    for key, next_key in key_pairs:
+    for key, next_key in itertools.pairwise(keys):
         key_is_string = isinstance(key, str)
         key_is_digit = isinstance(key, int) or (key_is_string and key.isdigit())
 
@@ -171,10 +184,10 @@ def nested_set(d, keys, value):
 
         next_level = None
 
-        if key_is_string:
+        if key_is_string and not key_is_digit:
             next_level = level.get(key, None)
             if next_level is None:
-                if next_key_is_string:
+                if next_key_is_string and not next_key_is_digit:
                     level[key] = {}
                     next_level = level[key]
                 elif next_key_is_digit:
@@ -192,7 +205,7 @@ def nested_set(d, keys, value):
                     level.extend([None] * (key + 1))
 
             if next_level is None:
-                if next_key_is_string:
+                if next_key_is_string and not next_key_is_digit:
                     level[key] = {}
                     next_level = level[key]
                 elif next_key_is_digit:
