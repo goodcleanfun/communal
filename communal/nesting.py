@@ -54,7 +54,8 @@ def nested_getattr(obj, keys, default=None):
     if isinstance(keys, str):
         keys = keys.split(".")
 
-    for key in keys:
+    n = len(keys)
+    for i, key in enumerate(keys):
         is_string = isinstance(key, str)
         is_digit = is_string and key.isdigit()
         is_star = key == "*"
@@ -77,7 +78,7 @@ def nested_getattr(obj, keys, default=None):
             use_map = True
         else:
             raise ValueError("Paths must be string attributes or int indexes")
-        if obj is DoesNotExist or obj is None:
+        if obj is DoesNotExist or (obj is None and i < n - 1):
             return default
     return obj
 
@@ -93,18 +94,21 @@ def nested_get(obj, keys, default=DoesNotExist):
     use_map = False
 
     try:
-        for key in keys:
+        n = len(keys)
+        for i, key in enumerate(keys):
             is_string = isinstance(key, str)
             is_digit = is_string and key.isdigit()
             is_star = key == "*"
 
             if is_string and not is_digit and not is_star:
                 if is_mapping(obj) and not use_map:
-                    val = obj.get(key, default)
+                    val = obj.get(key, DoesNotExist)
                     obj = val
                 elif is_sequence(obj) and use_map:
                     val = list(map(operator.itemgetter(key), obj))
                     obj = val
+                else:
+                    obj = DoesNotExist
             elif is_sequence(obj) and (
                 isinstance(key, int) or (isinstance(key, str) and key.isdigit())
             ):
@@ -117,7 +121,9 @@ def nested_get(obj, keys, default=DoesNotExist):
                 use_map = True
             else:
                 return default
-        if obj is DoesNotExist or obj is None:
+            if obj is DoesNotExist or (obj is None and i < n - 1):
+                return default
+        if obj is DoesNotExist:
             return default
         return obj
     except AttributeError:
@@ -236,7 +242,7 @@ def nested_delattr(obj, keys):
         delattr(obj, keys[-1])
 
 
-class Path(object):
+class Path:
     def __init__(self, path, separator="."):
         if isinstance(path, Path):
             self.path = path.path
@@ -249,14 +255,13 @@ class Path(object):
         return self.path.split(self.separator)
 
     def __iter__(self):
-        for part in self.parts:
-            yield part
+        yield from self.parts
 
     def __len__(self):
         return len(self.parts)
 
     def __repr__(self):
-        return "%s('%s')" % (self.__class__.__name__, self.path)
+        return "{}('{}')".format(self.__class__.__name__, self.path)
 
     def index(self, element):
         return self.parts.index(element)
