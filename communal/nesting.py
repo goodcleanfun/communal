@@ -2,6 +2,17 @@ import copy
 import operator
 from collections import deque
 
+try:
+    from itertools import pairwise
+except ImportError:
+    from itertools import tee
+
+    def pairwise(iterable):
+        a, b = tee(iterable)
+        next(b, None)
+        return zip(a, b)
+
+
 from communal.collections import is_mapping
 from communal.functions import attr_or_key_getter
 from communal.iterables import is_sequence, iterify
@@ -54,7 +65,8 @@ def nested_getattr(obj, keys, default=None):
     if isinstance(keys, str):
         keys = keys.split(".")
 
-    for key in keys:
+    n = len(keys)
+    for i, key in enumerate(keys):
         is_string = isinstance(key, str)
         is_digit = is_string and key.isdigit()
         is_star = key == "*"
@@ -77,7 +89,7 @@ def nested_getattr(obj, keys, default=None):
             use_map = True
         else:
             raise ValueError("Paths must be string attributes or int indexes")
-        if obj is DoesNotExist or obj is None:
+        if obj is DoesNotExist or (obj is None and i < n - 1):
             return default
     return obj
 
@@ -93,18 +105,21 @@ def nested_get(obj, keys, default=DoesNotExist):
     use_map = False
 
     try:
-        for key in keys:
+        n = len(keys)
+        for i, key in enumerate(keys):
             is_string = isinstance(key, str)
             is_digit = is_string and key.isdigit()
             is_star = key == "*"
 
             if is_string and not is_digit and not is_star:
                 if is_mapping(obj) and not use_map:
-                    val = obj.get(key, default)
+                    val = obj.get(key, DoesNotExist)
                     obj = val
                 elif is_sequence(obj) and use_map:
                     val = list(map(operator.itemgetter(key), obj))
                     obj = val
+                else:
+                    obj = DoesNotExist
             elif is_sequence(obj) and (
                 isinstance(key, int) or (isinstance(key, str) and key.isdigit())
             ):
@@ -117,7 +132,9 @@ def nested_get(obj, keys, default=DoesNotExist):
                 use_map = True
             else:
                 return default
-        if obj is DoesNotExist or obj is None:
+            if obj is DoesNotExist or (obj is None and i < n - 1):
+                return default
+        if obj is DoesNotExist:
             return default
         return obj
     except AttributeError:
@@ -134,8 +151,16 @@ def nested_getter(default=DoesNotExist):
     return _nested_get_with_default
 
 
-def nested_exists(d, key):
-    keys = iterify(key)
+def nested_exists(d, keys):
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    keys = iterify(keys)
+
+    # For source_data fields, just return the whole document
+    if len(keys) == 0:
+        return True
+
     obj = nested_get(d, keys[:-1], default=DoesNotExist)
 
     last_key = keys[-1]
@@ -151,10 +176,14 @@ def nested_exists(d, key):
 
 
 def nested_set(d, keys, value):
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    keys = iterify(keys)
+
     level = d
 
-    key_pairs = list(zip(keys, keys[1:]))
-    for key, next_key in key_pairs:
+    for key, next_key in pairwise(keys):
         key_is_string = isinstance(key, str)
         key_is_digit = isinstance(key, int) or (key_is_string and key.isdigit())
 
@@ -165,10 +194,10 @@ def nested_set(d, keys, value):
 
         next_level = None
 
-        if key_is_string:
+        if key_is_string and not key_is_digit:
             next_level = level.get(key, None)
             if next_level is None:
-                if next_key_is_string:
+                if next_key_is_string and not next_key_is_digit:
                     level[key] = {}
                     next_level = level[key]
                 elif next_key_is_digit:
@@ -186,7 +215,7 @@ def nested_set(d, keys, value):
                     level.extend([None] * (key + 1))
 
             if next_level is None:
-                if next_key_is_string:
+                if next_key_is_string and not next_key_is_digit:
                     level[key] = {}
                     next_level = level[key]
                 elif next_key_is_digit:
@@ -236,7 +265,7 @@ def nested_delattr(obj, keys):
         delattr(obj, keys[-1])
 
 
-class Path(object):
+class Path:
     def __init__(self, path, separator="."):
         if isinstance(path, Path):
             self.path = path.path
@@ -249,14 +278,13 @@ class Path(object):
         return self.path.split(self.separator)
 
     def __iter__(self):
-        for part in self.parts:
-            yield part
+        yield from self.parts
 
     def __len__(self):
         return len(self.parts)
 
     def __repr__(self):
-        return "%s('%s')" % (self.__class__.__name__, self.path)
+        return "{}('{}')".format(self.__class__.__name__, self.path)
 
     def index(self, element):
         return self.parts.index(element)
