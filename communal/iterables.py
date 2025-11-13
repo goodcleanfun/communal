@@ -198,10 +198,8 @@ def split_on_indices(it, indices, sorted_indices=False):
     return match, no_match
 
 
-def merge_values_at_indices(it, indices, values, sort_indices=False):
-    if sort_indices:
-        indices = sorted(indices)
-    elif not is_sequence(indices):
+def merge_values_at_indices(it, indices, values):
+    if not is_sequence(indices):
         indices = listify(indices)
 
     m = len(indices)
@@ -211,6 +209,7 @@ def merge_values_at_indices(it, indices, values, sort_indices=False):
             f"Length of merged sequence ({len(values)}) must be equal to length of indices {m}"
         )
 
+    data = listify(it)
     if m == 0:
         return listify(it)
 
@@ -219,8 +218,10 @@ def merge_values_at_indices(it, indices, values, sort_indices=False):
     if is_sequence(it):
         it = iter(it)
 
+    last_index = 0
     for index, value in zip(indices, values):
-        while len(result) < index:
-            result.append(next(it))
+        result.extend(data[last_index:index])
         result.append(value)
+        last_index = index
+    result.extend(data[last_index:])
     return result
