@@ -166,8 +166,8 @@ def split_on_condition(it, condition):
     return condition_true, condition_false
 
 
-def split_on_indices(it, indices, sort_indices=False):
-    if sort_indices:
+def split_on_indices(it, indices, sorted_indices=False):
+    if not sorted_indices:
         indices = sorted(indices)
     elif not is_sequence(indices):
         indices = listify(indices)
@@ -192,7 +192,7 @@ def split_on_indices(it, indices, sort_indices=False):
             j += 1
             match.append(x)
             if j >= m:
-                match.extend(data[i + 1 :])
+                no_match.extend(data[i + 1 :])
                 break
             ind = indices[j]
     return match, no_match
