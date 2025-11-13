@@ -1,15 +1,14 @@
 from datetime import datetime
 
 import pendulum
-from pytz import timezone
 
-US_EASTERN = timezone("US/Eastern").zone
-US_CENTRAL = timezone("US/Central").zone
-US_MOUNTAIN = timezone("US/Mountain").zone
-US_PACIFIC = timezone("US/Pacific").zone
-UTC = timezone("UTC").zone
+US_EASTERN = pendulum.timezone("US/Eastern")
+US_CENTRAL = pendulum.timezone("US/Central")
+US_MOUNTAIN = pendulum.timezone("US/Mountain")
+US_PACIFIC = pendulum.timezone("US/Pacific")
+UTC = pendulum.timezone("UTC")
 
 
 def local_datetime_utc(*args, **kwargs):
-    dt = pendulum(*args, **kwargs)
-    return datetime.utcfromtimestamp(dt.timestamp())
+    dt = pendulum.now(*args, **kwargs)
+    return datetime.fromtimestamp(dt.timestamp(), UTC)
